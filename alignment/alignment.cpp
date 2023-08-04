@@ -52,6 +52,15 @@ char genetic_code23[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSS
 char genetic_code24[] = "KNKNTTTTSSKSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Pterobranchia mitochondrial
 char genetic_code25[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSGCWCLFLF"; // Candidate Division SR1 and Gracilibacteria
 
+// structure code with 50 states:
+// use first 50 letters of ascii table for seq 50 alphabet
+char genetic_code26[] = "0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`";
+
+// structure code with 100 states:
+// use first 100 letters of ascii table for seq100 alphabet (don't use -)
+char genetic_code27[] = "0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+
 Alignment::Alignment()
         : vector<Pattern>()
 {
@@ -1046,6 +1055,9 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
     int num_bin = 0;
     int num_alpha = 0;
     int num_digit = 0;
+    int num_symbol50 =0;
+    int num_symbol100 =0;
+
 
     for (StrVector::iterator it = sequences.begin(); it != sequences.end(); it++)
         for (string::iterator i = it->begin(); i != it->end(); i++) {
@@ -1054,15 +1066,28 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
                 num_nuc++;
             if ((*i) == '0' || (*i) == '1')
                 num_bin++;
+            
             if (isalpha(*i)) num_alpha++;
             if (isdigit(*i)) num_digit++;
+            // detect ascii symbols from struct50
+            if ()
+            // detect ascii symbols from struct100
+            if ()
+
         }
+    if (((double)num_symbol50 + (double)num_symbol100 ) / num_ungap > 0.9)
+        return SEQ_STRUCT100;
+    
+    if (((double)num_symbol50) / num_ungap > 0.9)
+        return SEQ_STRUCT50;
+    
     if (((double)num_nuc) / num_ungap > 0.9)
         return SEQ_DNA;
     if (((double)num_bin) / num_ungap > 0.9)
         return SEQ_BINARY;
     if (((double)num_alpha) / num_ungap > 0.9)
         return SEQ_PROTEIN;
+    
     if (((double)(num_alpha+num_digit)) / num_ungap > 0.9)
         return SEQ_MORPH;
     return SEQ_UNKNOWN;
@@ -1210,6 +1235,36 @@ char Alignment::convertState(char state, SeqType seq_type) {
             return state;
         else
             return STATE_UNKNOWN;
+    case SEQ_MORPH: // Standard morphological character
+        loc = strchr(symbols_morph, state);
+
+        if (!loc) return STATE_INVALID; // unrecognize character
+        state = loc - symbols_morph;
+	    return state;
+    default:
+        return STATE_INVALID;
+
+    case SEQ_STRUCT_50: // Structural alphabet 50
+
+        loc = strchr(symbols_protein, state);
+
+        if (!loc) return STATE_INVALID; // unrecognize character
+        state = loc - symbols_protein;
+        if (state < 50)
+            return state;
+        else
+            return STATE_UNKNOWN;
+    
+    case SEQ_STRUCT_100: // Structural alphabet 100
+        loc = strchr(symbols_protein, state);
+
+        if (!loc) return STATE_INVALID; // unrecognize character
+        state = loc - symbols_protein;
+        if (state < 100)
+            return state;
+        else
+            return STATE_UNKNOWN;
+
     case SEQ_MORPH: // Standard morphological character
         loc = strchr(symbols_morph, state);
 
@@ -1473,6 +1528,14 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     case SEQ_PROTEIN:
         num_states = 20;
         cout << "Alignment most likely contains protein sequences" << endl;
+        break;
+    case SEQ_STRUCT_50:
+        num_states = 50;
+        cout << "Alignment most likely contains protein in struct alphabet 50" << endl;
+        break;
+    case SEQ_STRUCT_100:
+        num_states = 100;
+        cout << "Alignment most likely contains proteins in struct alphabet 100" << endl;
         break;
     case SEQ_MORPH:
         num_states = getMorphStates(sequences);
